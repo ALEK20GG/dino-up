@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>3D Movement Pointer Lock</title>
+<style>
+body { margin:0; overflow:hidden; }
+#info{
+position:absolute;
+top:40%;
+width:100%;
+text-align:center;
+font-size:24px;
+color:white;
+}
+</style>
+</head>
+<body>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+
+<script>
+
+/* SCENA */
+
+let scene = new THREE.Scene();
+scene.background = new THREE.Color(0x87ceeb);
+
+/* CAMERA */
+
+let camera = new THREE.PerspectiveCamera(
+75,
+window.innerWidth/window.innerHeight,
+0.1,
+1000
+);
+
+/* RENDERER */
+
+let renderer = new THREE.WebGLRenderer();
+renderer.setSize(window.innerWidth,window.innerHeight);
+document.body.appendChild(renderer.domElement);
+
+/* LUCI */
+
+scene.add(new THREE.AmbientLight(0xffffff,0.5));
+
+let light = new THREE.DirectionalLight(0xffffff,1);
+light.position.set(10,20,10);
+scene.add(light);
+
+/* TERRENO */
+
+let ground = new THREE.Mesh(
+new THREE.PlaneGeometry(200,200),
+new THREE.MeshStandardMaterial({color:0x808080})
+);
+
+ground.rotation.x = -Math.PI/2;
+scene.add(ground);
+
+scene.add(new THREE.GridHelper(200,50));
+
+/* PLAYER */
+
+let player = new THREE.Mesh(
+new THREE.BoxGeometry(1,1,1),
+new THREE.MeshStandardMaterial({color:0x00ff00})
+);
+
+player.position.y = 0.5;
+scene.add(player);
+
+/* CAMERA OFFSET */
+
+let cameraDistance = 8;
+let cameraHeight = 4;
+
+/* FISICA */
+let speedForward = 0;
+let speedSide = 0;
+
+let acceleration = 0.02;
+let deceleration = 0.015;
+
+let maxSpeed = 0.3;
+let velocityY = 0;
+let gravity = -0.01;
+let jumpForce = 0.25;
+let isGrounded = true;
+
+/* POINTER LOCK */
+document.body.addEventListener("click",()=>{
+document.body.requestPointerLock();
+});
+
+/* ROTAZIONE */
+
+let yaw = 0;
+let pitch = 0;
+
+document.addEventListener("mousemove",(e)=>{
+
+if(document.pointerLockElement === document.body){
+
+yaw -= e.movementX * 0.002;
+
+}
+
+});
+
+/* CONTROLLI */
+
+let keys = {};
+
+document.addEventListener("keydown",(e)=>{
+
+keys[e.code] = true;
+
+/* SALTO */
+
+if(e.code === "Space" && isGrounded){
+
+velocityY = jumpForce;
+isGrounded = false;
+
+}
+
+});
+
+document.addEventListener("keyup",(e)=>keys[e.code]=false);
+
+/* MOVIMENTO */
+
+function move(){
+
+let forward = new THREE.Vector3(
+Math.sin(yaw),
+0,
+Math.cos(yaw)
+);
+
+let right = new THREE.Vector3(
+Math.cos(yaw),
+0,
+-Math.sin(yaw)
+);
+
+/* ACCELERAZIONE */
+
+if(keys["KeyW"]) speedForward += acceleration;
+else if(keys["KeyS"]) speedForward -= acceleration;
+else{
+
+/* DECELERAZIONE */
+
+if(speedForward > 0){
+speedForward -= deceleration;
+if(speedForward < 0) speedForward = 0;
+}
+
+if(speedForward < 0){
+speedForward += deceleration;
+if(speedForward > 0) speedForward = 0;
+}
+
+}
+
+/* STRAFE */
+
+if(keys["KeyD"]) speedSide -= acceleration;
+else if(keys["KeyA"]) speedSide += acceleration;
+else{
+
+if(speedSide > 0){
+speedSide -= deceleration;
+if(speedSide < 0) speedSide = 0;
+}
+
+if(speedSide < 0){
+speedSide += deceleration;
+if(speedSide > 0) speedSide = 0;
+}
+
+}
+
+/* LIMITE VELOCITÀ */
+
+speedForward = Math.max(-maxSpeed, Math.min(maxSpeed, speedForward));
+speedSide = Math.max(-maxSpeed, Math.min(maxSpeed, speedSide));
+
+/* MOVIMENTO */
+
+player.position.add(forward.clone().multiplyScalar(speedForward));
+player.position.add(right.clone().multiplyScalar(speedSide));
+
+}
+/* GRAVITÀ */
+
+function applyGravity(){
+
+velocityY += gravity;
+player.position.y += velocityY;
+
+/* collisione terreno */
+
+if(player.position.y <= 0.5){
+
+player.position.y = 0.5;
+velocityY = 0;
+isGrounded = true;
+
+}
+
+}
+
+/* LOOP */
+
+function animate(){
+
+requestAnimationFrame(animate);
+
+move();
+applyGravity();
+
+/* posizione camera */
+
+camera.position.x = player.position.x - Math.sin(yaw)*cameraDistance;
+camera.position.z = player.position.z - Math.cos(yaw)*cameraDistance;
+camera.position.y = player.position.y + cameraHeight;
+
+/* guarda il player */
+
+camera.lookAt(
+player.position.x,
+player.position.y,
+player.position.z
+);
+
+renderer.render(scene,camera);
+
+}
+
+animate();
+
+</script>
+
+</body>
+</html>
