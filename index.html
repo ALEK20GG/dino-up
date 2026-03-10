@@ -6,12 +6,13 @@
 <style>
 body { margin:0; overflow:hidden; }
 #info{
-position:absolute;
-top:40%;
-width:100%;
-text-align:center;
-font-size:24px;
-color:white;
+  position:absolute;
+  top:40%;
+  width:100%;
+  text-align:center;
+  font-size:24px;
+  color:white;
+  pointer-events:none;
 }
 </style>
 </head>
@@ -19,225 +20,203 @@ color:white;
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
 
-<script>
+<script type="module">
 
-/* SCENA */
+import Input from "./input.js";
+
+/* ─── SCENA ─────────────────────────────────────── */
 
 let scene = new THREE.Scene();
 scene.background = new THREE.Color(0x87ceeb);
 
-/* CAMERA */
+/* ─── CAMERA ─────────────────────────────────────── */
 
 let camera = new THREE.PerspectiveCamera(
-75,
-window.innerWidth/window.innerHeight,
-0.1,
-1000
+  75,
+  window.innerWidth / window.innerHeight,
+  0.1,
+  1000
 );
 
-/* RENDERER */
+/* ─── RENDERER ───────────────────────────────────── */
 
 let renderer = new THREE.WebGLRenderer();
-renderer.setSize(window.innerWidth,window.innerHeight);
+renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
-/* LUCI */
+/* ─── LUCI ───────────────────────────────────────── */
 
-scene.add(new THREE.AmbientLight(0xffffff,0.5));
+scene.add(new THREE.AmbientLight(0xffffff, 0.5));
 
-let light = new THREE.DirectionalLight(0xffffff,1);
-light.position.set(10,20,10);
+let light = new THREE.DirectionalLight(0xffffff, 1);
+light.position.set(10, 20, 10);
 scene.add(light);
 
-/* TERRENO */
+/* ─── TERRENO ─────────────────────────────────────── */
 
 let ground = new THREE.Mesh(
-new THREE.PlaneGeometry(200,200),
-new THREE.MeshStandardMaterial({color:0x808080})
+  new THREE.PlaneGeometry(200, 200),
+  new THREE.MeshStandardMaterial({ color: 0x808080 })
 );
-
-ground.rotation.x = -Math.PI/2;
+ground.rotation.x = -Math.PI / 2;
 scene.add(ground);
 
-scene.add(new THREE.GridHelper(200,50));
+scene.add(new THREE.GridHelper(200, 50));
 
-/* PLAYER */
+/* ─── PLAYER ─────────────────────────────────────── */
 
 let player = new THREE.Mesh(
-new THREE.BoxGeometry(1,1,1),
-new THREE.MeshStandardMaterial({color:0x00ff00})
+  new THREE.BoxGeometry(1, 1, 1),
+  new THREE.MeshStandardMaterial({ color: 0x00ff00 })
 );
-
 player.position.y = 0.5;
 scene.add(player);
 
-/* CAMERA OFFSET */
+/* ─── CAMERA SETTINGS ────────────────────────────── */
 
 let cameraDistance = 8;
-let cameraHeight = 4;
+let cameraHeight   = 4;
 
-/* FISICA */
-let speedForward = 0;
-let speedSide = 0;
-
-let acceleration = 0.02;
-let deceleration = 0.015;
-
-let maxSpeed = 0.3;
-let velocityY = 0;
-let gravity = -0.01;
-let jumpForce = 0.25;
-let isGrounded = true;
-
-/* POINTER LOCK */
-document.body.addEventListener("click",()=>{
-document.body.requestPointerLock();
-});
-
-/* ROTAZIONE */
-
-let yaw = 0;
+// yaw  = rotazione orizzontale (sinistra/destra)
+// pitch = rotazione verticale  (su/giù) — opzionale, per ora non usato
+let yaw   = 0;
 let pitch = 0;
 
-document.addEventListener("mousemove",(e)=>{
+const CAM_YAW_SPEED   = 0.03;   // velocità rotazione telecamera con tasti
+const MOUSE_SENSITIVITY = 0.002;
 
-if(document.pointerLockElement === document.body){
+/* ─── FISICA ─────────────────────────────────────── */
 
-yaw -= e.movementX * 0.002;
+let speedForward = 0;
+let speedSide    = 0;
 
-}
+const acceleration = 0.02;
+const deceleration = 0.015;
+const maxSpeed     = 0.3;
 
+let velocityY  = 0;
+const gravity  = -0.01;
+const jumpForce = 0.25;
+let isGrounded = true;
+
+/* ─── INPUT ──────────────────────────────────────── */
+
+const input = new Input();
+
+/* ─── POINTER LOCK (mouse → yaw telecamera) ──────── */
+
+document.body.addEventListener("click", () => {
+  document.body.requestPointerLock();
 });
 
-/* CONTROLLI */
-
-let keys = {};
-
-document.addEventListener("keydown",(e)=>{
-
-keys[e.code] = true;
-
-/* SALTO */
-
-if(e.code === "Space" && isGrounded){
-
-velocityY = jumpForce;
-isGrounded = false;
-
-}
-
+document.addEventListener("mousemove", e => {
+  if (document.pointerLockElement === document.body) {
+    yaw -= e.movementX * MOUSE_SENSITIVITY;
+  }
 });
 
-document.addEventListener("keyup",(e)=>keys[e.code]=false);
+/* ─── MOVIMENTO ──────────────────────────────────── */
 
-/* MOVIMENTO */
+function move() {
 
-function move(){
+  // Direzione basata su yaw della telecamera
+  const forward = new THREE.Vector3( Math.sin(yaw), 0,  Math.cos(yaw));
+  const right   = new THREE.Vector3( Math.cos(yaw), 0, -Math.sin(yaw));
 
-let forward = new THREE.Vector3(
-Math.sin(yaw),
-0,
-Math.cos(yaw)
-);
+  const mv = input.input.moveDir;
 
-let right = new THREE.Vector3(
-Math.cos(yaw),
-0,
--Math.sin(yaw)
-);
+  // Avanti / indietro  → v del moveDir (-1 avanti, +1 indietro, come GML)
+  if (mv.v < 0)      speedForward += acceleration;
+  else if (mv.v > 0) speedForward -= acceleration;
+  else {
+    if (speedForward > 0) { speedForward -= deceleration; if (speedForward < 0) speedForward = 0; }
+    if (speedForward < 0) { speedForward += deceleration; if (speedForward > 0) speedForward = 0; }
+  }
 
-/* ACCELERAZIONE */
+  // Laterale → h del moveDir (-1 sinistra, +1 destra)
+  if (mv.h < 0)      speedSide += acceleration;
+  else if (mv.h > 0) speedSide -= acceleration;
+  else {
+    if (speedSide > 0) { speedSide -= deceleration; if (speedSide < 0) speedSide = 0; }
+    if (speedSide < 0) { speedSide += deceleration; if (speedSide > 0) speedSide = 0; }
+  }
 
-if(keys["KeyW"]) speedForward += acceleration;
-else if(keys["KeyS"]) speedForward -= acceleration;
-else{
+  speedForward = Math.max(-maxSpeed, Math.min(maxSpeed, speedForward));
+  speedSide    = Math.max(-maxSpeed, Math.min(maxSpeed, speedSide));
 
-/* DECELERAZIONE */
+  player.position.add(forward.clone().multiplyScalar(speedForward));
+  player.position.add(right.clone().multiplyScalar(speedSide));
 
-if(speedForward > 0){
-speedForward -= deceleration;
-if(speedForward < 0) speedForward = 0;
-}
-
-if(speedForward < 0){
-speedForward += deceleration;
-if(speedForward > 0) speedForward = 0;
-}
-
-}
-
-/* STRAFE */
-
-if(keys["KeyD"]) speedSide -= acceleration;
-else if(keys["KeyA"]) speedSide += acceleration;
-else{
-
-if(speedSide > 0){
-speedSide -= deceleration;
-if(speedSide < 0) speedSide = 0;
-}
-
-if(speedSide < 0){
-speedSide += deceleration;
-if(speedSide > 0) speedSide = 0;
-}
+  // Ruota il mesh del player nella direzione di movimento
+  if (speedForward !== 0 || speedSide !== 0) {
+    const moveAngle = Math.atan2(speedSide, speedForward);
+    player.rotation.y = yaw + moveAngle;
+  }
 
 }
 
-/* LIMITE VELOCITÀ */
+/* ─── TELECAMERA con frecce / right stick ────────── */
 
-speedForward = Math.max(-maxSpeed, Math.min(maxSpeed, speedForward));
-speedSide = Math.max(-maxSpeed, Math.min(maxSpeed, speedSide));
+function updateCameraYaw() {
 
-/* MOVIMENTO */
+  const cam = input.input.camDir;
 
-player.position.add(forward.clone().multiplyScalar(speedForward));
-player.position.add(right.clone().multiplyScalar(speedSide));
-
-}
-/* GRAVITÀ */
-
-function applyGravity(){
-
-velocityY += gravity;
-player.position.y += velocityY;
-
-/* collisione terreno */
-
-if(player.position.y <= 0.5){
-
-player.position.y = 0.5;
-velocityY = 0;
-isGrounded = true;
+  // h: -1 ruota sinistra, +1 ruota destra
+  yaw -= cam.h * CAM_YAW_SPEED;
 
 }
 
+/* ─── SALTO ──────────────────────────────────────── */
+
+function handleJump() {
+
+  if (input.input.jumpPressed && isGrounded) {
+    velocityY  = jumpForce;
+    isGrounded = false;
+  }
+
 }
 
-/* LOOP */
+/* ─── GRAVITÀ ─────────────────────────────────────── */
 
-function animate(){
+function applyGravity() {
 
-requestAnimationFrame(animate);
+  velocityY += gravity;
+  player.position.y += velocityY;
 
-move();
-applyGravity();
+  if (player.position.y <= 0.5) {
+    player.position.y = 0.5;
+    velocityY  = 0;
+    isGrounded = true;
+  }
 
-/* posizione camera */
+}
 
-camera.position.x = player.position.x - Math.sin(yaw)*cameraDistance;
-camera.position.z = player.position.z - Math.cos(yaw)*cameraDistance;
-camera.position.y = player.position.y + cameraHeight;
+/* ─── LOOP ───────────────────────────────────────── */
 
-/* guarda il player */
+function animate() {
 
-camera.lookAt(
-player.position.x,
-player.position.y,
-player.position.z
-);
+  requestAnimationFrame(animate);
 
-renderer.render(scene,camera);
+  input.update();
+
+  updateCameraYaw();
+  handleJump();
+  move();
+  applyGravity();
+
+  // Posizione camera dietro il player
+  camera.position.x = player.position.x - Math.sin(yaw) * cameraDistance;
+  camera.position.z = player.position.z - Math.cos(yaw) * cameraDistance;
+  camera.position.y = player.position.y + cameraHeight;
+
+  camera.lookAt(
+    player.position.x,
+    player.position.y,
+    player.position.z
+  );
+
+  renderer.render(scene, camera);
 
 }
 
