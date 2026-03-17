@@ -41,23 +41,28 @@ export function move(input, player) {
   player.position.add(right.clone().multiplyScalar(speedSide));
 
   // rotazione player
-  if (speedForward !== 0 || speedSide !== 0) {
+  // calcola movimento reale
+const movement = new THREE.Vector3();
 
-    const moveAngle = Math.atan2(speedSide, speedForward);
-  
-    // direzione movimento nel mondo (non più camera + move)
-    const targetRotation = moveAngle;
-  
-    // SMOOTH ROTATION PLAYER
-    const smooth = 0.15;
-  
-    let diff = targetRotation - player.rotation.y;
-  
-    // normalizza angolo (-PI, PI)
-    diff = Math.atan2(Math.sin(diff), Math.cos(diff));
-  
-    player.rotation.y += diff * smooth;
-  }
+movement.add(forward.clone().multiplyScalar(speedForward));
+movement.add(right.clone().multiplyScalar(speedSide));
+
+// ruota player SOLO se si sta muovendo
+if (movement.lengthSq() > 0.0001) {
+
+  // direzione reale nel mondo
+  const targetRotation = Math.atan2(movement.x, movement.z);
+
+  // 🧈 smoothing rotazione
+  const smooth = 0.15;
+
+  let diff = targetRotation - player.rotation.y;
+
+  // normalizza angolo (-PI, PI)
+  diff = Math.atan2(Math.sin(diff), Math.cos(diff));
+
+  player.rotation.y += diff * smooth;
+}
 
   /* ─── JUMP ─── */
   if (input.input.jumpPressed && isGrounded) {

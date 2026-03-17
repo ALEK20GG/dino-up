@@ -2,8 +2,8 @@ let yaw = 0;
 let pitch = 0;
 
 //temp
-const xsign = 1;
-const ysign = -1;
+const hsign = 1;
+const vsign = -1;
 
 const CAM_YAW_SPEED = 0.03;
 const CAM_PITCH_SPEED = 0.02;
@@ -41,11 +41,11 @@ export function updateCameraPosition(camera, player) {
   const distance = 8;
   const height = 4;
 
-  const x = player.position.x - Math.sin(yaw) * distance * Math.cos(pitch) * xsign;
-  const z = player.position.z - Math.cos(yaw) * distance * Math.cos(pitch) * xsign;
-  const y = player.position.y + height + Math.sin(pitch) * distance * ysign;
+  const x = player.position.x - Math.sin(yaw) * distance * Math.cos(pitch) * hsign;
+  const z = player.position.z - Math.cos(yaw) * distance * Math.cos(pitch) * hsign;
+  const y = player.position.y + height + Math.sin(pitch) * distance * vsign;
 
-  const smooth = 0.1;
+  const smooth = 0.3;
 
   camera.position.x += (x - camera.position.x) * smooth;
   camera.position.y += (y - camera.position.y) * smooth;
