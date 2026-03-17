@@ -10,7 +10,38 @@ body { margin:0; overflow:hidden; }
 <body>
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
-<script type="module" src="./main.js"></script>
+
+<script type="module" src="./main.js">
+
+import Input from "./input.js";
+
+/* ─── SERVER CONNECTION ─────────────────────────────────────── */
+
+const socket = new WebSocket("ws://localhost:8081");
+
+let myId = null;
+let otherPlayers = {};
+
+let meshes = {};
+
+/* ─── DATA RECIEVING ─────────────────────────────────────── */
+
+socket.onmessage = (event) => {
+
+const data = JSON.parse(event.data);
+
+if (data.type === "init") {
+  myId = data.id;
+  otherPlayers = data.players;
+}
+
+if (data.type === "state") {
+  otherPlayers = data.players;
+}
+
+};
+
+</script>
 
 </body>
 </html>

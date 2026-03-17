@@ -37,6 +37,39 @@ function animate() {
     updateCameraPosition(camera, player);
   
     renderer.render(scene, camera);
-}
 
+    if (socket.readyState === WebSocket.OPEN && myId) {
+
+        socket.send(JSON.stringify({
+          type: "update",
+          x: player.position.x,
+          y: player.position.y,
+          z: player.position.z,
+          yaw: yaw
+        }));
+        
+    }
+    
+    for (let id in otherPlayers) {
+    
+    if (id === myId) continue;
+    
+    let p = otherPlayers[id];
+    
+    if (!meshes[id]) {
+    
+        const mesh = new THREE.Mesh(
+        new THREE.BoxGeometry(1,1,1),
+        new THREE.MeshStandardMaterial({ color: 0xff0000 })
+        );
+    
+        scene.add(mesh);
+        meshes[id] = mesh;
+    }
+    
+    meshes[id].position.set(p.x, p.y, p.z);
+    meshes[id].rotation.y = p.yaw;
+    
+    }
+}
 animate();
