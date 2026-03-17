@@ -5,15 +5,6 @@
 <title>3D Movement Pointer Lock</title>
 <style>
 body { margin:0; overflow:hidden; }
-#info{
-  position:absolute;
-  top:40%;
-  width:100%;
-  text-align:center;
-  font-size:24px;
-  color:white;
-  pointer-events:none;
-}
 </style>
 </head>
 <body>
@@ -22,7 +13,7 @@ body { margin:0; overflow:hidden; }
 
 <script type="module">
 
-import Input from "../input.js";
+import Input from "./input.js";
 
 /* ─── SERVER CONNECTION ─────────────────────────────────────── */
 
@@ -243,40 +234,39 @@ function animate() {
   );
 
   renderer.render(scene, camera);
-
   if (socket.readyState === WebSocket.OPEN && myId) {
 
-  socket.send(JSON.stringify({
-    type: "update",
-    x: player.position.x,
-    y: player.position.y,
-    z: player.position.z,
-    yaw: yaw
-  }));
+socket.send(JSON.stringify({
+  type: "update",
+  x: player.position.x,
+  y: player.position.y,
+  z: player.position.z,
+  yaw: yaw
+}));
 
-  }
+}
 
-  for (let id in otherPlayers) {
+for (let id in otherPlayers) {
 
-  if (id === myId) continue;
+if (id === myId) continue;
 
-  let p = otherPlayers[id];
+let p = otherPlayers[id];
 
-  if (!meshes[id]) {
+if (!meshes[id]) {
 
-    const mesh = new THREE.Mesh(
-      new THREE.BoxGeometry(1,1,1),
-      new THREE.MeshStandardMaterial({ color: 0xff0000 })
-    );
+  const mesh = new THREE.Mesh(
+    new THREE.BoxGeometry(1,1,1),
+    new THREE.MeshStandardMaterial({ color: 0xff0000 })
+  );
 
-    scene.add(mesh);
-    meshes[id] = mesh;
-  }
+  scene.add(mesh);
+  meshes[id] = mesh;
+}
 
-  meshes[id].position.set(p.x, p.y, p.z);
-  meshes[id].rotation.y = p.yaw;
+meshes[id].position.set(p.x, p.y, p.z);
+meshes[id].rotation.y = p.yaw;
 
-  }
+}
 
 }
 
