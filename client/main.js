@@ -6,9 +6,7 @@ import { updateCameraRotation, updateCameraPosition, getYaw } from "./camera.js"
 
 /* ─── SERVER CONNECTION ─────────────────────────────────────── */
 
-const WS_URL = window.location.hostname === "localhost"
-  ? "ws://localhost:8081"
-  : "wss://tuo-backend.onrender.com"; // ← sostituisci con il tuo URL Render
+const WS_URL = "wss://dino-up.onrender.com/"; // ← sostituisci con il tuo URL Render
 
 const socket = new WebSocket(WS_URL);
 
