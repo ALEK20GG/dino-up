@@ -6,7 +6,11 @@ import { updateCameraRotation, updateCameraPosition, getYaw } from "./camera.js"
 
 /* ─── SERVER CONNECTION ─────────────────────────────────────── */
 
-const socket = new WebSocket("ws://localhost:8081");
+const WS_URL = window.location.hostname === "localhost"
+  ? "ws://localhost:8081"
+  : "wss://tuo-backend.onrender.com"; // ← sostituisci con il tuo URL Render
+
+const socket = new WebSocket(WS_URL);
 
 let myId = null;
 let otherPlayers = {};
@@ -29,9 +33,6 @@ if (data.type === "state") {
 }
 
 };
-
-
-
 
 
 const input = new Input();

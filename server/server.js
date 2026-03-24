@@ -1,9 +1,10 @@
 import { WebSocketServer } from "ws";
 import crypto from "crypto";
 
-const wss = new WebSocketServer({ port: 8081 });
+const PORT = process.env.PORT || 8081;
+const wss = new WebSocketServer({ port: PORT });
 
-console.log("Server avviato su ws://localhost:8081");
+console.log(`Server avviato su ws://localhost:${PORT}`);
 
 /* ─── STATO GIOCO ───────────────────────── */
 
