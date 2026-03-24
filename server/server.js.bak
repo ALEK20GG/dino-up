@@ -1,20 +1,10 @@
 import { WebSocketServer } from "ws";
-import http from "http";
 import crypto from "crypto";
 
-/* ─── SERVER HTTP + WEBSOCKET ───────────── */
-
-const server = http.createServer((req, res) => {
-  res.writeHead(200);
-  res.end("OK");
-});
-
-const wss = new WebSocketServer({ server });
-
 const PORT = process.env.PORT || 8081;
-server.listen(PORT, () => {
-  console.log(`Server avviato su porta ${PORT}`);
-});
+const wss = new WebSocketServer({ port: PORT });
+
+console.log(`Server avviato su ws://localhost:${PORT}`);
 
 /* ─── STATO GIOCO ───────────────────────── */
 
