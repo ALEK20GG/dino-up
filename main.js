@@ -2,7 +2,37 @@ import { scene, camera, renderer, player } from "./scene.js";
 import Input from "./input.js";
 
 import { move } from "./movement.js";
-import { updateCameraRotation, updateCameraPosition } from "./camera.js";
+import { updateCameraRotation, updateCameraPosition, getYaw } from "./camera.js";
+
+/* ─── SERVER CONNECTION ─────────────────────────────────────── */
+
+const socket = new WebSocket("ws://localhost:8081");
+
+let myId = null;
+let otherPlayers = {};
+
+let meshes = {};
+
+/* ─── DATA RECIEVING ─────────────────────────────────────── */
+
+socket.onmessage = (event) => {
+
+const data = JSON.parse(event.data);
+
+if (data.type === "init") {
+  myId = data.id;
+  otherPlayers = data.players;
+}
+
+if (data.type === "state") {
+  otherPlayers = data.players;
+}
+
+};
+
+
+
+
 
 const input = new Input();
 
@@ -45,7 +75,7 @@ function animate() {
           x: player.position.x,
           y: player.position.y,
           z: player.position.z,
-          yaw: yaw
+          yaw: getYaw()
         }));
         
     }
@@ -57,7 +87,6 @@ function animate() {
     let p = otherPlayers[id];
     
     if (!meshes[id]) {
-    
         const mesh = new THREE.Mesh(
         new THREE.BoxGeometry(1,1,1),
         new THREE.MeshStandardMaterial({ color: 0xff0000 })
