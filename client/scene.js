@@ -1,3 +1,6 @@
+import * as THREE from "three";
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+
 export const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x87ceeb);
 
@@ -29,19 +32,17 @@ light.castShadow = true;
 scene.add(light);
 
 /* ─── COLLISION MESHES ─── */
-// Holds all meshes from the map that the player can stand on
 export const collisionMeshes = [];
 
 /* ─── MAP (GLB) ─── */
 export let mapLoaded = false;
 
-const loader = new THREE.GLTFLoader();
+const loader = new GLTFLoader();
 loader.load(
   "./map.glb",
   (gltf) => {
     const map = gltf.scene;
 
-    // Traverse and collect all meshes for collision, enable shadows
     map.traverse((child) => {
       if (child.isMesh) {
         child.castShadow = true;
@@ -59,7 +60,7 @@ loader.load(
   },
   (error) => {
     console.error("Failed to load map.glb:", error);
-    // Fallback: add a flat ground so the game still works
+    // Fallback flat ground
     const ground = new THREE.Mesh(
       new THREE.PlaneGeometry(200, 200),
       new THREE.MeshStandardMaterial({ color: 0x808080 })
@@ -72,7 +73,7 @@ loader.load(
   }
 );
 
-/* ─── GRID HELPER (optional, remove if unwanted) ─── */
+/* ─── GRID HELPER ─── */
 scene.add(new THREE.GridHelper(200, 50));
 
 /* ─── PLAYER ─── */
@@ -80,6 +81,6 @@ export const player = new THREE.Mesh(
   new THREE.BoxGeometry(1, 1, 1),
   new THREE.MeshStandardMaterial({ color: 0x00ff00 })
 );
-player.position.y = 2; // start above ground so it falls into place
+player.position.y = 2;
 player.castShadow = true;
 scene.add(player);

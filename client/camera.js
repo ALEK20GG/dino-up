@@ -1,7 +1,8 @@
+import * as THREE from "three";
+
 let yaw = 0;
 let pitch = 0;
 
-//temp
 const hsign = 1;
 const vsign = -1;
 
@@ -13,22 +14,19 @@ const MOUSE_SENSITIVITY = 0.002;
 
 export function updateCameraRotation(input, mouseX = 0, mouseY = 0) {
 
-  // 🎮 RIGHT STICK
   const cam = input.input.camDir;
 
   yaw   -= cam.h * CAM_YAW_SPEED;
   pitch -= cam.v * CAM_PITCH_SPEED;
 
-  // 🖱️ MOUSE
   yaw   -= mouseX * MOUSE_SENSITIVITY;
   pitch -= mouseY * MOUSE_SENSITIVITY;
 
-  // 🔒 LIMITA PITCH (evita flip)
   const maxPitch = Math.PI / 2 - 0.1;
   pitch = Math.max(-maxPitch, Math.min(maxPitch, pitch));
 }
 
-/* ─── GETTERS (IMPORTANTE) ─── */
+/* ─── GETTERS ─── */
 
 export function getYaw() {
   return yaw;
@@ -56,6 +54,6 @@ export function updateCameraPosition(camera, player) {
     player.position.y + 1,
     player.position.z
   );
-  
+
   camera.lookAt(target);
 }

@@ -1,43 +1,37 @@
+import * as THREE from "three";
 import { scene, camera, renderer, player } from "./scene.js";
 import Input from "./input.js";
-
 import { move } from "./movement.js";
 import { updateCameraRotation, updateCameraPosition, getYaw } from "./camera.js";
 
-/* ─── SERVER CONNECTION ─────────────────────────────────────── */
-
+/* ─── SERVER CONNECTION ─── */
 const WS_URL = window.location.hostname === "localhost"
   ? "ws://localhost:8081"
-  : "wss://tuo-backend.onrender.com"; // ← sostituisci con il tuo URL Render
+  : "wss://tuo-backend.onrender.com";
 
 const socket = new WebSocket(WS_URL);
 
 let myId = null;
 let otherPlayers = {};
-
 let meshes = {};
 
-/* ─── DATA RECIEVING ─────────────────────────────────────── */
-
+/* ─── DATA RECEIVING ─── */
 socket.onmessage = (event) => {
+  const data = JSON.parse(event.data);
 
-const data = JSON.parse(event.data);
+  if (data.type === "init") {
+    myId = data.id;
+    otherPlayers = data.players;
+  }
 
-if (data.type === "init") {
-  myId = data.id;
-  otherPlayers = data.players;
-}
-
-if (data.type === "state") {
-  otherPlayers = data.players;
-}
-
+  if (data.type === "state") {
+    otherPlayers = data.players;
+  }
 };
-
 
 const input = new Input();
 
-/* POINTER LOCK */
+/* ─── POINTER LOCK ─── */
 document.body.addEventListener("click", () => {
   document.body.requestPointerLock();
 });
@@ -52,54 +46,48 @@ document.addEventListener("mousemove", e => {
   }
 });
 
+/* ─── LOOP ─── */
 function animate() {
-    requestAnimationFrame(animate);
-  
-    input.update();
-  
-    updateCameraRotation(input, mouseX, mouseY);
-  
-    // reset mouse delta
-    mouseX = 0;
-    mouseY = 0;
-  
-    move(input, player);
-  
-    updateCameraPosition(camera, player);
-  
-    renderer.render(scene, camera);
+  requestAnimationFrame(animate);
 
-    if (socket.readyState === WebSocket.OPEN && myId) {
+  input.update();
 
-        socket.send(JSON.stringify({
-          type: "update",
-          x: player.position.x,
-          y: player.position.y,
-          z: player.position.z,
-          yaw: getYaw()
-        }));
-        
-    }
-    
-    for (let id in otherPlayers) {
-    
+  updateCameraRotation(input, mouseX, mouseY);
+  mouseX = 0;
+  mouseY = 0;
+
+  move(input, player);
+
+  updateCameraPosition(camera, player);
+
+  renderer.render(scene, camera);
+
+  if (socket.readyState === WebSocket.OPEN && myId) {
+    socket.send(JSON.stringify({
+      type: "update",
+      x: player.position.x,
+      y: player.position.y,
+      z: player.position.z,
+      yaw: getYaw()
+    }));
+  }
+
+  for (let id in otherPlayers) {
     if (id === myId) continue;
-    
+
     let p = otherPlayers[id];
-    
+
     if (!meshes[id]) {
-        const mesh = new THREE.Mesh(
-        new THREE.BoxGeometry(1,1,1),
+      const mesh = new THREE.Mesh(
+        new THREE.BoxGeometry(1, 1, 1),
         new THREE.MeshStandardMaterial({ color: 0xff0000 })
-        );
-    
-        scene.add(mesh);
-        meshes[id] = mesh;
+      );
+      scene.add(mesh);
+      meshes[id] = mesh;
     }
-    
+
     meshes[id].position.set(p.x, p.y, p.z);
     meshes[id].rotation.y = p.yaw;
-    
-    }
+  }
 }
 animate();

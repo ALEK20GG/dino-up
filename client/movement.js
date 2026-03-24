@@ -1,3 +1,4 @@
+import * as THREE from "three";
 import { getYaw } from "./camera.js";
 import { collisionMeshes } from "./scene.js";
 
@@ -17,22 +18,17 @@ let isGrounded = false;
 const raycaster = new THREE.Raycaster();
 const downVec = new THREE.Vector3(0, -1, 0);
 
-// How high above the player origin we cast from (half height + a little extra)
 const RAY_ORIGIN_OFFSET = 1.0;
-// Max distance downward to detect ground
-const RAY_MAX_DIST = 2.5;
-// Player half-height (box is 1 unit tall)
 const PLAYER_HALF_HEIGHT = 0.5;
 
 function getGroundHeight(position) {
-  // Cast a ray straight down from slightly above the player
   const origin = new THREE.Vector3(
     position.x,
     position.y + RAY_ORIGIN_OFFSET,
     position.z
   );
   raycaster.set(origin, downVec);
-  raycaster.far = RAY_MAX_DIST + RAY_ORIGIN_OFFSET;
+  raycaster.far = RAY_ORIGIN_OFFSET + 2.5;
 
   const hits = raycaster.intersectObjects(collisionMeshes, true);
 
@@ -40,7 +36,7 @@ function getGroundHeight(position) {
     return hits[0].point.y;
   }
 
-  return null; // no ground found
+  return null;
 }
 
 /* ─── MOVEMENT ─── */
@@ -52,12 +48,10 @@ export function move(input, player) {
 
   const mv = input.input.moveDir;
 
-  // Forward / backward
   if (mv.v < 0) speedForward += acceleration;
   else if (mv.v > 0) speedForward -= acceleration;
   else speedForward *= 0.9;
 
-  // Lateral
   if (mv.h < 0) speedSide += acceleration;
   else if (mv.h > 0) speedSide -= acceleration;
   else speedSide *= 0.9;
@@ -97,21 +91,23 @@ export function move(input, player) {
 
     if (groundY !== null) {
       const floorY = groundY + PLAYER_HALF_HEIGHT;
-
       if (player.position.y <= floorY) {
         player.position.y = floorY;
         velocityY = 0;
         isGrounded = true;
+      } else {
+        isGrounded = false;
       }
     } else {
-      // No ground detected — check for a safety net (prevent falling forever)
+      isGrounded = false;
+      // Safety net — respawn if fallen too far
       if (player.position.y < -50) {
         player.position.set(0, 5, 0);
         velocityY = 0;
       }
     }
   } else {
-    // Fallback while map is still loading
+    // Fallback while map is loading
     if (player.position.y <= PLAYER_HALF_HEIGHT) {
       player.position.y = PLAYER_HALF_HEIGHT;
       velocityY = 0;
