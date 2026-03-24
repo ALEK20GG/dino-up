@@ -1,21 +1,49 @@
 import { getYaw } from "./camera.js";
+import { collisionMeshes } from "./scene.js";
 
 let speedForward = 0;
 let speedSide = 0;
 
 const acceleration = 0.02;
-const deceleration = 0.015;
 const maxSpeed = 0.3;
 
 /* ─── JUMP + GRAVITY ─── */
-
 let velocityY = 0;
-const gravity = -0.01;
+const gravity = -0.015;
 const jumpForce = 0.25;
-let isGrounded = true;
+let isGrounded = false;
+
+/* ─── RAYCASTER for map collision ─── */
+const raycaster = new THREE.Raycaster();
+const downVec = new THREE.Vector3(0, -1, 0);
+
+// How high above the player origin we cast from (half height + a little extra)
+const RAY_ORIGIN_OFFSET = 1.0;
+// Max distance downward to detect ground
+const RAY_MAX_DIST = 2.5;
+// Player half-height (box is 1 unit tall)
+const PLAYER_HALF_HEIGHT = 0.5;
+
+function getGroundHeight(position) {
+  // Cast a ray straight down from slightly above the player
+  const origin = new THREE.Vector3(
+    position.x,
+    position.y + RAY_ORIGIN_OFFSET,
+    position.z
+  );
+  raycaster.set(origin, downVec);
+  raycaster.far = RAY_MAX_DIST + RAY_ORIGIN_OFFSET;
+
+  const hits = raycaster.intersectObjects(collisionMeshes, true);
+
+  if (hits.length > 0) {
+    return hits[0].point.y;
+  }
+
+  return null; // no ground found
+}
 
 /* ─── MOVEMENT ─── */
-
 export function move(input, player) {
   const yaw = getYaw();
 
@@ -24,12 +52,12 @@ export function move(input, player) {
 
   const mv = input.input.moveDir;
 
-  // avanti / indietro
+  // Forward / backward
   if (mv.v < 0) speedForward += acceleration;
   else if (mv.v > 0) speedForward -= acceleration;
   else speedForward *= 0.9;
 
-  // laterale
+  // Lateral
   if (mv.h < 0) speedSide += acceleration;
   else if (mv.h > 0) speedSide -= acceleration;
   else speedSide *= 0.9;
@@ -40,29 +68,18 @@ export function move(input, player) {
   player.position.add(forward.clone().multiplyScalar(speedForward));
   player.position.add(right.clone().multiplyScalar(speedSide));
 
-  // rotazione player
-  // calcola movimento reale
-const movement = new THREE.Vector3();
+  /* ─── PLAYER ROTATION ─── */
+  const movement = new THREE.Vector3();
+  movement.add(forward.clone().multiplyScalar(speedForward));
+  movement.add(right.clone().multiplyScalar(speedSide));
 
-movement.add(forward.clone().multiplyScalar(speedForward));
-movement.add(right.clone().multiplyScalar(speedSide));
-
-// ruota player SOLO se si sta muovendo
-if (movement.lengthSq() > 0.0001) {
-
-  // direzione reale nel mondo
-  const targetRotation = Math.atan2(movement.x, movement.z);
-
-  // 🧈 smoothing rotazione
-  const smooth = 0.15;
-
-  let diff = targetRotation - player.rotation.y;
-
-  // normalizza angolo (-PI, PI)
-  diff = Math.atan2(Math.sin(diff), Math.cos(diff));
-
-  player.rotation.y += diff * smooth;
-}
+  if (movement.lengthSq() > 0.0001) {
+    const targetRotation = Math.atan2(movement.x, movement.z);
+    const smooth = 0.15;
+    let diff = targetRotation - player.rotation.y;
+    diff = Math.atan2(Math.sin(diff), Math.cos(diff));
+    player.rotation.y += diff * smooth;
+  }
 
   /* ─── JUMP ─── */
   if (input.input.jumpPressed && isGrounded) {
@@ -74,9 +91,31 @@ if (movement.lengthSq() > 0.0001) {
   velocityY += gravity;
   player.position.y += velocityY;
 
-  if (player.position.y <= 0.5) {
-    player.position.y = 0.5;
-    velocityY = 0;
-    isGrounded = true;
+  /* ─── MAP COLLISION ─── */
+  if (collisionMeshes.length > 0) {
+    const groundY = getGroundHeight(player.position);
+
+    if (groundY !== null) {
+      const floorY = groundY + PLAYER_HALF_HEIGHT;
+
+      if (player.position.y <= floorY) {
+        player.position.y = floorY;
+        velocityY = 0;
+        isGrounded = true;
+      }
+    } else {
+      // No ground detected — check for a safety net (prevent falling forever)
+      if (player.position.y < -50) {
+        player.position.set(0, 5, 0);
+        velocityY = 0;
+      }
+    }
+  } else {
+    // Fallback while map is still loading
+    if (player.position.y <= PLAYER_HALF_HEIGHT) {
+      player.position.y = PLAYER_HALF_HEIGHT;
+      velocityY = 0;
+      isGrounded = true;
+    }
   }
 }
