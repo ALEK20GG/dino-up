@@ -48,9 +48,20 @@ export default class Input {
       }
   
       this.setupKeyboard()
-  
+      this.setupFocusGuard()
     }
-  
+    
+    setupFocusGuard() {
+      const clear = () => {
+        this.keys = {}
+        this.keysPressed = {}
+      }
+      window.addEventListener("blur", clear)
+      document.addEventListener("visibilitychange", () => {
+        if (document.hidden) clear()
+      })
+    }
+
     setupKeyboard() {
   
       window.addEventListener("keydown", e => {

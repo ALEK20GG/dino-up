@@ -79,7 +79,7 @@ function animate() {
 
     if (!meshes[id]) {
       const mesh = new THREE.Mesh(
-        new THREE.BoxGeometry(1, 1, 1),
+        new THREE.CapsuleGeometry(0.4, 0.8, 8, 16),
         new THREE.MeshStandardMaterial({ color: 0xff0000 })
       );
       scene.add(mesh);

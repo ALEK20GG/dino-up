@@ -78,7 +78,7 @@ scene.add(new THREE.GridHelper(200, 50));
 
 /* ─── PLAYER ─── */
 export const player = new THREE.Mesh(
-  new THREE.BoxGeometry(1, 1, 1),
+  new THREE.CapsuleGeometry(0.4, 0.8, 8, 16),
   new THREE.MeshStandardMaterial({ color: 0x00ff00 })
 );
 player.position.y = 2;
