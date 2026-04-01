@@ -70,8 +70,7 @@ loader.load(
   }
 );
 
-/* ─── GRID HELPER ─── */
-scene.add(new THREE.GridHelper(200, 50));
+
 
 /* ─── PLAYER BOX (fisica, invisibile) ─── */
 export const player = new THREE.Mesh(
