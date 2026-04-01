@@ -1,18 +1,18 @@
 import * as THREE from "three";
 import { getYaw } from "./camera.js";
-import { collisionMeshes } from "./scene.js";
+import { collisionMeshes, playerModel, updatePlayerAnimation, MODEL_VISUAL_OFFSET } from "./scene.js";
 
 const raycaster = new THREE.Raycaster();
 const downVec   = new THREE.Vector3(0, -1, 0);
 
-// Capsule dims — keep in sync with scene.js
+// Capsule dims
 const RADIUS           = 0.4;
-const HALF_HEIGHT      = 0.8; // radius + length/2
-const RAY_ORIGIN_Y     = 1.0; // offset above player center for down-ray origin
+const HALF_HEIGHT      = 0.8;
+const RAY_ORIGIN_Y     = 1.0;
 
 // Wall ray config
-const WALL_RAY_DIST    = RADIUS + 0.15; // how close to a wall before pushing back
-const WALL_RAY_ORIGINS = [0, 0.5, 1.0]; // heights (relative to feet) to cast horizontal rays
+const WALL_RAY_DIST    = RADIUS + 0.15;
+const WALL_RAY_ORIGINS = [0, 0.5, 1.0];
 
 // Movement
 let speedForward = 0;
@@ -26,6 +26,9 @@ const gravity  = -0.015;
 const jumpForce = 0.3;
 let isGrounded  = false;
 
+// Variabile per tracciare se ci si sta muovendo
+let wasMoving = false;
+
 /* ─── DOWN RAY ─── */
 function getGroundHeight(position) {
   const origin = new THREE.Vector3(position.x, position.y + RAY_ORIGIN_Y, position.z);
@@ -36,14 +39,13 @@ function getGroundHeight(position) {
 }
 
 /* ─── WALL RAYS ─── */
-// Cast rays in `dir` from multiple heights. Returns how much to push back (0 if clear).
 function getWallPenetration(position, dir) {
   let maxPenetration = 0;
 
   for (const heightOffset of WALL_RAY_ORIGINS) {
     const origin = new THREE.Vector3(
       position.x,
-      position.y + heightOffset,  // feet-relative height
+      position.y + heightOffset,
       position.z
     );
     raycaster.set(origin, dir);
@@ -51,7 +53,6 @@ function getWallPenetration(position, dir) {
     const hits = raycaster.intersectObjects(collisionMeshes, true);
 
     if (hits.length > 0) {
-      // How deep we're inside the wall
       const penetration = WALL_RAY_DIST - hits[0].distance;
       maxPenetration = Math.max(maxPenetration, penetration);
     }
@@ -62,7 +63,6 @@ function getWallPenetration(position, dir) {
 
 /* ─── RESOLVE WALL COLLISIONS ─── */
 function resolveWalls(position) {
-  // 4 cardinal directions in world space
   const directions = [
     new THREE.Vector3( 1,  0,  0),
     new THREE.Vector3(-1,  0,  0),
@@ -73,7 +73,6 @@ function resolveWalls(position) {
   for (const dir of directions) {
     const penetration = getWallPenetration(position, dir);
     if (penetration > 0) {
-      // Push player back out of the wall
       position.x -= dir.x * penetration;
       position.z -= dir.z * penetration;
     }
@@ -84,41 +83,46 @@ function resolveWalls(position) {
 export function move(input, player) {
   const yaw = getYaw();
 
-  const forward = new THREE.Vector3( Math.sin(yaw), 0,  Math.cos(yaw));
-  const right   = new THREE.Vector3( Math.cos(yaw), 0, -Math.sin(yaw));
+  const forward = new THREE.Vector3(Math.sin(yaw), 0, Math.cos(yaw));
+  const right   = new THREE.Vector3(Math.cos(yaw), 0, -Math.sin(yaw));
 
   const mv = input.input.moveDir;
 
-  if      (mv.v < 0) speedForward += acceleration;
+  // Aggiorna velocità
+  if (mv.v < 0) speedForward += acceleration;
   else if (mv.v > 0) speedForward -= acceleration;
-  else               speedForward *= 0.9;
+  else speedForward *= 0.9;
 
-  if      (mv.h < 0) speedSide += acceleration;
+  if (mv.h < 0) speedSide += acceleration;
   else if (mv.h > 0) speedSide -= acceleration;
-  else               speedSide *= 0.9;
+  else speedSide *= 0.9;
 
   speedForward = Math.max(-maxSpeed, Math.min(maxSpeed, speedForward));
   speedSide    = Math.max(-maxSpeed, Math.min(maxSpeed, speedSide));
 
-  // Apply horizontal movement first
+  // Calcola se il player si sta muovendo (valore assoluto della velocità)
+  const isMoving = Math.abs(speedForward) > 0.01 || Math.abs(speedSide) > 0.01;
+
+  // Applica movimento
   player.position.add(forward.clone().multiplyScalar(speedForward));
   player.position.add(right.clone().multiplyScalar(speedSide));
 
-  // Resolve wall collisions AFTER moving
+  // Risolvi collisioni
   if (collisionMeshes.length > 0) {
     resolveWalls(player.position);
   }
 
   /* ─── PLAYER ROTATION ─── */
-  const movement = new THREE.Vector3()
-    .add(forward.clone().multiplyScalar(speedForward))
-    .add(right.clone().multiplyScalar(speedSide));
+  const movement = new THREE.Vector3();
+  movement.add(forward.clone().multiplyScalar(speedForward));
+  movement.add(right.clone().multiplyScalar(speedSide));
 
   if (movement.lengthSq() > 0.0001) {
     const targetRotation = Math.atan2(movement.x, movement.z);
+    const smooth = 0.15;
     let diff = targetRotation - player.rotation.y;
     diff = Math.atan2(Math.sin(diff), Math.cos(diff));
-    player.rotation.y += diff * 0.15;
+    player.rotation.y += diff * smooth;
   }
 
   /* ─── JUMP ─── */
@@ -155,5 +159,19 @@ export function move(input, player) {
       velocityY  = 0;
       isGrounded = true;
     }
+  }
+
+  /* ─── SYNC playerModel visivo ─── */
+  playerModel.position.copy(player.position);
+  playerModel.position.y = player.position.y + MODEL_VISUAL_OFFSET;
+  playerModel.rotation.y = player.rotation.y - Math.PI / 2;
+  
+  // Aggiorna animazione - PASSA SEMPRE isMoving
+  updatePlayerAnimation(isMoving);
+  
+  // Debug: stampa quando cambia stato movimento
+  if (isMoving !== wasMoving) {
+    console.log("Movement state changed:", isMoving ? "MOVING" : "IDLE", "speed:", speedForward, speedSide);
+    wasMoving = isMoving;
   }
 }

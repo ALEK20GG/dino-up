@@ -34,14 +34,17 @@ export function getYaw() {
 
 /* ─── CAMERA POSITION ─── */
 
-export function updateCameraPosition(camera, player) {
+// playerPos può essere un Vector3 oppure un oggetto con .position (Three.js Object3D)
+export function updateCameraPosition(camera, playerPos) {
+
+  const pos = playerPos.isVector3 ? playerPos : playerPos.position;
 
   const distance = 8;
   const height = 4;
 
-  const x = player.position.x - Math.sin(yaw) * distance * Math.cos(pitch) * hsign;
-  const z = player.position.z - Math.cos(yaw) * distance * Math.cos(pitch) * hsign;
-  const y = player.position.y + height + Math.sin(pitch) * distance * vsign;
+  const x = pos.x - Math.sin(yaw) * distance * Math.cos(pitch) * hsign;
+  const z = pos.z - Math.cos(yaw) * distance * Math.cos(pitch) * hsign;
+  const y = pos.y + height + Math.sin(pitch) * distance * vsign;
 
   const smooth = 0.3;
 
@@ -50,9 +53,9 @@ export function updateCameraPosition(camera, player) {
   camera.position.z += (z - camera.position.z) * smooth;
 
   const target = new THREE.Vector3(
-    player.position.x,
-    player.position.y + 1,
-    player.position.z
+    pos.x,
+    pos.y + 1,
+    pos.z
   );
 
   camera.lookAt(target);

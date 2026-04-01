@@ -42,7 +42,6 @@ loader.load(
   "./map.glb",
   (gltf) => {
     const map = gltf.scene;
-
     map.traverse((child) => {
       if (child.isMesh) {
         child.castShadow = true;
@@ -50,7 +49,6 @@ loader.load(
         collisionMeshes.push(child);
       }
     });
-
     scene.add(map);
     mapLoaded = true;
     console.log("Map loaded:", collisionMeshes.length, "collision meshes");
@@ -60,7 +58,6 @@ loader.load(
   },
   (error) => {
     console.error("Failed to load map.glb:", error);
-    // Fallback flat ground
     const ground = new THREE.Mesh(
       new THREE.PlaneGeometry(200, 200),
       new THREE.MeshStandardMaterial({ color: 0x808080 })
@@ -76,11 +73,159 @@ loader.load(
 /* ─── GRID HELPER ─── */
 scene.add(new THREE.GridHelper(200, 50));
 
-/* ─── PLAYER ─── */
+/* ─── PLAYER BOX (fisica, invisibile) ─── */
 export const player = new THREE.Mesh(
-  new THREE.CapsuleGeometry(0.4, 0.8, 8, 16),
+  new THREE.BoxGeometry(1, 1, 1),
   new THREE.MeshStandardMaterial({ color: 0x00ff00 })
 );
 player.position.y = 2;
 player.castShadow = true;
+player.visible = false;
 scene.add(player);
+
+/* ─── PLAYER MODEL (visivo) ─── */
+export const playerModel = new THREE.Group();
+playerModel.position.y = 2;
+playerModel.scale.set(60, 60, 60);
+scene.add(playerModel);
+
+const frameFiles = [
+  "./player/0.glb",
+  "./player/1.glb",
+  "./player/2.glb",
+  "./player/3.glb",
+  "./player/4.glb",
+  "./player/5.glb",
+  "./player/6.glb",
+  "./player/7.glb",
+];
+
+let playerFrameScenes = [];
+let currentFrame = 0;
+let frameTimer = 0;
+const FRAME_DURATION = 0.1;
+
+export const MODEL_VISUAL_OFFSET = -0.8; // REGOLA QUESTO VALORE SE NECESSARIO
+
+/* ─── CARICA MODELLO LOCALE ─── */
+export async function loadPlayerAnimations() {
+  console.log("Loading player animations...");
+  const playerLoader = new GLTFLoader();
+
+  const promises = frameFiles.map(
+    (file) =>
+      new Promise((resolve, reject) =>
+        playerLoader.load(file, (gltf) => {
+          console.log("Loaded:", file);
+          resolve(gltf.scene);
+        }, undefined, reject)
+      )
+  );
+
+  try {
+    playerFrameScenes = await Promise.all(promises);
+    console.log("All frames loaded, count:", playerFrameScenes.length);
+  } catch (err) {
+    console.error("Error loading frames:", err);
+    return;
+  }
+
+  playerFrameScenes.forEach((frameScene, i) => {
+    // Mostra solo il primo frame all'inizio
+    frameScene.visible = i === 0;
+    
+    // Calcola il bounding box per centrare il modello
+    const box = new THREE.Box3().setFromObject(frameScene);
+    const minY = box.min.y;
+    
+    // Sposta il modello in modo che la sua base sia a Y=0
+    frameScene.position.y = -minY;
+    
+    frameScene.traverse((child) => {
+      if (child.isMesh) {
+        child.castShadow = true;
+        child.receiveShadow = true;
+      }
+    });
+    playerModel.add(frameScene);
+  });
+
+  // Applica colore verde per il player locale
+  playerModel.traverse((child) => {
+    if (child.isMesh && child.material) {
+      child.material.color.set("#A4C639");
+    }
+  });
+
+  console.log("Player model ready");
+  return playerFrameScenes;
+}
+
+/* ─── CARICA MODELLO PER GIOCATORI REMOTI ─── */
+export async function loadPlayerModelForRemote() {
+  console.log("Loading remote player model...");
+  const playerLoader = new GLTFLoader();
+
+  const promises = frameFiles.map(
+    (file) =>
+      new Promise((resolve, reject) =>
+        playerLoader.load(file, (gltf) => resolve(gltf.scene), undefined, reject)
+      )
+  );
+
+  const frameScenes = await Promise.all(promises);
+
+  frameScenes.forEach((frameScene) => {
+    const box = new THREE.Box3().setFromObject(frameScene);
+    const minY = box.min.y;
+    frameScene.position.y = -minY;
+  });
+
+  console.log("Remote player model ready, frames:", frameScenes.length);
+  return frameScenes;
+}
+
+/* ─── AGGIORNA ANIMAZIONE PLAYER LOCALE ─── */
+export function updatePlayerAnimation(isMoving) {
+  // Se i frame non sono ancora caricati, esci
+  if (!playerFrameScenes || playerFrameScenes.length === 0) {
+    return;
+  }
+
+  if (isMoving) {
+    // Aggiorna timer basato su delta time (approssimato a 60fps)
+    frameTimer += 1 / 60;
+    
+    if (frameTimer >= FRAME_DURATION) {
+      frameTimer = 0;
+      
+      // Nascondi frame corrente
+      if (playerFrameScenes[currentFrame]) {
+        playerFrameScenes[currentFrame].visible = false;
+      }
+      
+      // Passa al frame successivo
+      currentFrame = (currentFrame + 1) % playerFrameScenes.length;
+      
+      // Mostra nuovo frame
+      if (playerFrameScenes[currentFrame]) {
+        playerFrameScenes[currentFrame].visible = true;
+      }
+      
+      // Debug: stampa ogni cambio frame (opzionale, rimuovi dopo)
+      // console.log("Animation frame:", currentFrame);
+    }
+  } else {
+    // Se non in movimento, resetta al primo frame
+    if (currentFrame !== 0) {
+      if (playerFrameScenes[currentFrame]) {
+        playerFrameScenes[currentFrame].visible = false;
+      }
+      currentFrame = 0;
+      if (playerFrameScenes[0]) {
+        playerFrameScenes[0].visible = true;
+      }
+    }
+    frameTimer = 0;
+  }
+}
