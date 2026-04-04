@@ -10,6 +10,8 @@ const socket = new WebSocket(WS_URL);
 
 let myId = null;
 const remotePlayers = {}; // id → Player instance
+let lastSocketUpdate = 0;
+const SOCKET_UPDATE_INTERVAL = 50; // milliseconds (20 Hz)
 
 /* ─── LOCAL PLAYER ─── */
 const input = new Input();
@@ -101,8 +103,10 @@ function animate() {
 
   renderer.render(scene, camera);
 
-  // Send local state to server
-  if (socket.readyState === WebSocket.OPEN && myId) {
+  // Send local state to server (throttled to 20 Hz)
+  const now = performance.now();
+  if (socket.readyState === WebSocket.OPEN && myId && now - lastSocketUpdate >= SOCKET_UPDATE_INTERVAL) {
+    lastSocketUpdate = now;
     socket.send(JSON.stringify({
       type:      "update",
       x:         localPlayer.position.x,

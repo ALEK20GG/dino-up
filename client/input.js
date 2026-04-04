@@ -10,6 +10,8 @@ export default class Input {
 
     this.deadzone = 0.2
 
+    this.prevGamepadButtons = {}
+
     this.binds = {
 
       // Movimento personaggio → WASD + left stick
@@ -202,7 +204,22 @@ export default class Input {
 
   actionPressed(bind) {
 
-    return this.checkKeyboardPressed(this.binds[bind])
+    let pressed = this.checkKeyboardPressed(this.binds[bind])
+
+    const pad = this.getGamepad()
+    if (pad) {
+      if (bind === "jump" && pad.buttons[0].pressed && !this.prevGamepadButtons[0]) {
+        pressed = true
+      }
+      if (bind === "confirm" && pad.buttons[0].pressed && !this.prevGamepadButtons[0]) {
+        pressed = true
+      }
+      if (bind === "cancel" && pad.buttons[1].pressed && !this.prevGamepadButtons[1]) {
+        pressed = true
+      }
+    }
+
+    return pressed
 
   }
 
@@ -216,6 +233,13 @@ export default class Input {
 
     this.input.confirm = this.actionPressed("confirm")
     this.input.cancel  = this.actionPressed("cancel")
+
+    // Update gamepad button states for next frame
+    const pad = this.getGamepad()
+    if (pad) {
+      this.prevGamepadButtons[0] = pad.buttons[0].pressed
+      this.prevGamepadButtons[1] = pad.buttons[1].pressed
+    }
 
     this.keysPressed = {}
 

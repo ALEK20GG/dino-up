@@ -10,6 +10,10 @@ const CAM_YAW_SPEED = 0.03;
 const CAM_PITCH_SPEED = 0.02;
 const MOUSE_SENSITIVITY = 0.002;
 
+// Reuse vectors to avoid garbage collection
+const _cameraTarget = new THREE.Vector3();
+const _cameraPos = new THREE.Vector3();
+
 /* ─── INPUT CAMERA ─── */
 
 export function updateCameraRotation(input, mouseX = 0, mouseY = 0) {
@@ -52,11 +56,9 @@ export function updateCameraPosition(camera, playerPos) {
   camera.position.y += (y - camera.position.y) * smooth;
   camera.position.z += (z - camera.position.z) * smooth;
 
-  const target = new THREE.Vector3(
-    pos.x,
-    pos.y + 1,
-    pos.z
-  );
+  _cameraTarget.x = pos.x;
+  _cameraTarget.y = pos.y + 1;
+  _cameraTarget.z = pos.z;
 
-  camera.lookAt(target);
+  camera.lookAt(_cameraTarget);
 }

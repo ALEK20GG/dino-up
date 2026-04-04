@@ -8,9 +8,9 @@ export const camera = new THREE.PerspectiveCamera(
   75, window.innerWidth / window.innerHeight, 0.1, 1000
 );
 
-export const renderer = new THREE.WebGLRenderer();
+export const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.shadowMap.enabled = true;
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 document.body.appendChild(renderer.domElement);
 
 window.addEventListener("resize", () => {
@@ -23,11 +23,12 @@ window.addEventListener("resize", () => {
 scene.add(new THREE.AmbientLight(0xffffff, 0.5));
 const sun = new THREE.DirectionalLight(0xffffff, 1);
 sun.position.set(10, 20, 10);
-sun.castShadow = true;
 scene.add(sun);
 
 /* ─── GRID ─── */
-scene.add(new THREE.GridHelper(200, 50));
+const grid = new THREE.GridHelper(200, 50);
+grid.visible = false;
+scene.add(grid);
 
 /* ─── COLLISION MESHES ─── */
 export const collisionMeshes = [];
@@ -39,8 +40,6 @@ loader.load(
   (gltf) => {
     gltf.scene.traverse(child => {
       if (child.isMesh) {
-        child.castShadow = true;
-        child.receiveShadow = true;
         collisionMeshes.push(child);
       }
     });
@@ -54,7 +53,6 @@ loader.load(
       new THREE.MeshStandardMaterial({ color: 0x808080 })
     );
     ground.rotation.x = -Math.PI / 2;
-    ground.receiveShadow = true;
     scene.add(ground);
     collisionMeshes.push(ground);
     console.log("Map failed, using fallback ground");

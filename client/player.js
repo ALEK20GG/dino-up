@@ -17,7 +17,7 @@ const RADIUS          = 0.4;
 const HALF_HEIGHT     = 0.8;   // radius + half cylinder = 0.4 + 0.4
 const RAY_ORIGIN_Y    = 1.0;
 const WALL_RAY_DIST   = RADIUS + 0.15;
-const WALL_RAY_ORIGINS = [0, 0.5, 1.0];
+const WALL_RAY_ORIGINS = [0.5];
 
 const ACCELERATION    = 0.02;
 const MAX_SPEED       = 0.15;
@@ -80,8 +80,6 @@ async function loadFrames(color, transparent = false) {
     s.position.y = -box.min.y; // ground the model
     s.traverse(child => {
       if (child.isMesh && child.material) {
-        child.castShadow = true;
-        child.receiveShadow = true;
         child.material = child.material.clone(); // avoid shared material mutation
         child.material.color.set(color);
         if (transparent) {
@@ -131,6 +129,10 @@ export default class Player {
     this.speedForward = 0;
     this.speedSide    = 0;
     this.lastRemotePosition = new THREE.Vector3();
+    
+    /* ─── COLLISION CACHE ─── */
+    this.lastPhysicsPos = new THREE.Vector3();
+    this.physicsCheckCounter = 0;
   }
 
   /* ─── ASYNC INIT: load GLB frames ─── */
@@ -209,7 +211,10 @@ export default class Player {
     /* ─── HORIZONTAL MOVEMENT + WALL COLLISION ─── */
     this.body.position.addScaledVector(forward, this.speedForward);
     this.body.position.addScaledVector(right,   this.speedSide);
-    if (collisionMeshes.length > 0) resolveWalls(this.body.position);
+    
+    const moveDist = this.body.position.distanceToSquared(this.lastPhysicsPos);
+    if (collisionMeshes.length > 0 && moveDist > 0.01) resolveWalls(this.body.position);
+    this.lastPhysicsPos.copy(this.body.position);
 
     /* ─── ROTATION ─── */
     const move = forward.clone().multiplyScalar(this.speedForward)
@@ -251,7 +256,7 @@ export default class Player {
       }
 
       const ceilY = getCeilingY(this.body.position);
-      if (ceilY !== null) {
+      if (ceilY !== null && this.velocityY > 0.01) {
         const ceilingLimit = ceilY - HALF_HEIGHT - RADIUS;
         if (this.body.position.y > ceilingLimit) {
           this.body.position.y = ceilingLimit;
