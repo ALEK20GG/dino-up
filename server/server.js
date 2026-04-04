@@ -11,7 +11,7 @@ server.listen(PORT, () => console.log(`Server on port ${PORT}`));
 let players = {};
 
 function createPlayer(id) {
-  return { id, x: 0, y: 0.5, z: 0, yaw: 0, animFrame: 0 };
+  return { id, x: 0, y: 2, z: 0, yaw: 0, animFrame: 0 };
 }
 
 wss.on("connection", (ws) => {

@@ -154,6 +154,17 @@ export default class Player {
   /* ─── CURRENT ANIM FRAME getter ─── */
   get animFrame() { return this.currentFrame; }
 
+  /* ─── FORCE GROUNDING (on spawn) ─── */
+  grounded() {
+    if (collisionMeshes.length === 0) return;
+    const groundY = getGroundY(this.body.position);
+    if (groundY !== null) {
+      this.body.position.y = groundY + HALF_HEIGHT;
+      this.velocityY = 0;
+      this.isGrounded = true;
+    }
+  }
+
   /* ─── SHOW FRAME ─── */
   _showFrame(index) {
     if (!this.loaded || this.frames.length === 0) return;
