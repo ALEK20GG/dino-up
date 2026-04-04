@@ -1,51 +1,85 @@
-# Deploy su Render
+# Dino Up 🦕
 
-## Struttura
+Un multiplayer 3D in tempo reale dove controlli un dinosauro in un mondo condiviso. Muovi il tuo dino, salta e interagisci con altri giocatori!
+
+## 🚀 Quick Start
+
+### 1. Setup Locale
+ **Avvia il client**:
+   - Apri `client/index.html` con **Live Server** (VS Code extension)
+   - Oppure usa qualsiasi server HTTP locale
+
+### 2. Gioca!
+
+- **Movimento**: WASD o Left Stick
+- **Telecamera**: Mouse o Right Stick
+- **Salto**: Spazio o A/B (controller)
+- **Pointer Lock**: Clicca per catturare il mouse
+
+## 🌐 Server Pubblico
+
+Il server è già deployato su **Render**:
+- URL: `wss://dino-up.onrender.com`
+- Su piano gratuito, si spegne dopo 15 minuti di inattività
+
+## 📁 Struttura Progetto
+
 ```
-client/   → Static Site su Render
-server/   → Web Service su Render
+dino-up/
+├── client/           # Frontend Three.js
+│   ├── index.html    # Pagina principale
+│   ├── main.js       # Logica principale + WebSocket
+│   ├── player.js     # Classe Player + fisica
+│   ├── camera.js     # Controlli telecamera
+│   ├── input.js      # Gestione input (tastiera + controller)
+│   ├── scene.js      # Setup Three.js + caricamento mappa
+│   └── player/       # Modelli GLB del dinosauro
+├── server/           # Backend Node.js
+│   ├── server.js     # WebSocket server
+│   └── package.json  # Dipendenze
+└── README.md         # Questo file
 ```
 
----
+## 🛠️ Tecnologie
 
-## 1. Deploy Backend (Web Service)
+- **Frontend**: Three.js, WebGL
+- **Backend**: Node.js, WebSocket (ws)
+- **3D Models**: GLB
+- **Networking**: WebSocket per stato in tempo reale
+- **Fisica**: Raycasting per collisioni e terreno
 
-1. Crea un nuovo **Web Service** su Render
-2. Collega il repo (o carica la cartella `server/`)
-3. Impostazioni:
-   - **Runtime**: Node
-   - **Root Directory**: `server`
-   - **Build Command**: `npm install`
-   - **Start Command**: `node server.js`
-4. Dopo il deploy, copia l'URL del servizio (es. `tuo-backend.onrender.com`)
+## 🎮 Controlli
 
----
-
-## 2. Aggiorna l'URL nel client
-
-In `client/main.js`, riga 7, sostituisci:
-```js
-: "wss://tuo-backend.onrender.com"
-```
-con il tuo URL reale, es.:
-```js
-: "wss://mio-gioco-server.onrender.com"
-```
-
----
-
-## 3. Deploy Frontend (Static Site)
-
-1. Crea un nuovo **Static Site** su Render
-2. Collega il repo (o carica la cartella `client/`)
-3. Impostazioni:
-   - **Root Directory**: `client`
-   - **Publish Directory**: `.`
-   - **Build Command**: (lascia vuoto)
-
----
+| Azione | Tastiera | Controller |
+|--------|----------|------------|
+| Movimento | WASD | Left Stick |
+| Telecamera | Mouse | Right Stick |
+| Salto | Spazio | A / B |
+| Pointer Lock | Click | - |
 
 ## ⚠️ Note
 
-- Su piano **gratuito** Render il backend si spegne dopo 15 min di inattività
-- I WebSocket usano `wss://` (sicuro) in produzione, `ws://` in locale
+- **Live Server obbligatorio**: Il client carica risorse locali, serve un server HTTP
+- **WebSocket sicuro**: Usa `wss://` in produzione, `ws://` in locale
+- **Performance**: Ottimizzato per 60 FPS, ma dipende dall'hardware
+- **Browser**: Chrome/Firefox consigliati per WebGL
+
+## 🔧 Sviluppo
+
+Per modificare il codice:
+1. Client: modifica file in `client/`
+2. Server: modifica `server/server.js`
+3. Testa sempre con Live Server per il client
+
+## 📝 TODO
+
+- [ ] Aggiungere più mappe
+- [ ] Sistema di chat
+- [ ] Effetti particellari
+- [ ] Suoni ambientali
+- [ ] Mobile support
+- [ ] Aggiungere Crobu skin
+
+---
+
+**Divertiti con Dino Up! 🦕🎮**
