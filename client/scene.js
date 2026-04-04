@@ -25,13 +25,21 @@ const sun = new THREE.DirectionalLight(0xffffff, 1);
 sun.position.set(10, 20, 10);
 scene.add(sun);
 
-/* ─── GRID ─── */
-const grid = new THREE.GridHelper(200, 50);
-grid.visible = false;
-scene.add(grid);
-
 /* ─── COLLISION MESHES ─── */
 export const collisionMeshes = [];
+
+let _mapLoaded = false;
+const _mapLoadCallbacks = [];
+
+export function onMapLoaded(callback) {
+  _mapLoadCallbacks.push(callback);
+  if (_mapLoaded) callback();
+}
+
+function _fireMapLoaded() {
+  _mapLoaded = true;
+  _mapLoadCallbacks.forEach(cb => cb());
+}
 
 /* ─── MAP ─── */
 const loader = new GLTFLoader();
@@ -45,6 +53,7 @@ loader.load(
     });
     scene.add(gltf.scene);
     console.log("Map loaded:", collisionMeshes.length, "meshes");
+    _fireMapLoaded();
   },
   undefined,
   () => {
@@ -56,5 +65,6 @@ loader.load(
     scene.add(ground);
     collisionMeshes.push(ground);
     console.log("Map failed, using fallback ground");
+    _fireMapLoaded();
   }
 );

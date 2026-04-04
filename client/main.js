@@ -3,6 +3,7 @@ import { scene, camera, renderer } from "./scene.js";
 import Input from "./input.js";
 import Player from "./player.js";
 import { updateCameraRotation, updateCameraPosition } from "./camera.js";
+import { onMapLoaded } from "./scene.js";
 
 /* ─── WEBSOCKET ─── */
 const WS_URL = "wss://dino-up.onrender.com/";
@@ -16,9 +17,10 @@ const SOCKET_UPDATE_INTERVAL = 50; // milliseconds (20 Hz)
 /* ─── LOCAL PLAYER ─── */
 const input = new Input();
 const localPlayer = new Player(scene, "local");
-localPlayer.load("#A4C639").then(() => {
-  console.log("Local player ready");
-  localPlayer.grounded();  // Force floor detection on spawn
+localPlayer.load("#A4C639").then(() => console.log("Local player ready"));
+
+onMapLoaded(() => {
+  if (localPlayer.loaded) localPlayer.snapToGround();
 });
 
 /* ─── POINTER LOCK ─── */
@@ -75,7 +77,6 @@ function spawnRemote(id, playerData) {
   p.load("#ff6666", true).then(() => {
     remotePlayers[id] = p;
     p.updateRemote(playerData);
-    p.grounded();  // Force floor detection on spawn
   }).catch((err) => {
     console.error("Failed to load remote player:", id, err);
     delete remotePlayers[id];

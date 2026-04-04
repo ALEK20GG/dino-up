@@ -154,15 +154,15 @@ export default class Player {
   /* ─── CURRENT ANIM FRAME getter ─── */
   get animFrame() { return this.currentFrame; }
 
-  /* ─── FORCE GROUNDING (on spawn) ─── */
-  grounded() {
-    if (collisionMeshes.length === 0) return;
+  /* ─── SNAP TO GROUND if the map is loaded */
+  snapToGround() {
+    if (collisionMeshes.length === 0) return false;
     const groundY = getGroundY(this.body.position);
-    if (groundY !== null) {
-      this.body.position.y = groundY + HALF_HEIGHT;
-      this.velocityY = 0;
-      this.isGrounded = true;
-    }
+    if (groundY === null) return false;
+    this.body.position.y = groundY + HALF_HEIGHT;
+    this.velocityY = 0;
+    this.isGrounded = true;
+    return true;
   }
 
   /* ─── SHOW FRAME ─── */
