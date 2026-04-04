@@ -43,7 +43,7 @@ socket.onmessage = (event) => {
   if (data.type === "state") {
     // Spawn new players
     for (const id in data.players) {
-      if (id !== myId && !remotePlayers[id]) spawnRemote(id, data.players[id]);
+      if (id !== myId && !(id in remotePlayers)) spawnRemote(id, data.players[id]);
     }
     // Remove disconnected players
     for (const id in remotePlayers) {
@@ -51,7 +51,7 @@ socket.onmessage = (event) => {
     }
     // Update existing remote players
     for (const id in remotePlayers) {
-      if (data.players[id]) remotePlayers[id].updateRemote(data.players[id]);
+      if (data.players[id] && remotePlayers[id]) remotePlayers[id].updateRemote(data.players[id]);
     }
   }
 
@@ -61,17 +61,26 @@ socket.onmessage = (event) => {
 };
 
 function spawnRemote(id, playerData) {
+  if (id in remotePlayers) return;
+
   console.log("Spawning remote player:", id);
   const p = new Player(scene, "remote");
-  p.load("#ff6666").then(() => {
-    remotePlayers[id] = p;       // only register AFTER frames are loaded
-    p.updateRemote(playerData);  // set initial position + frame
+  remotePlayers[id] = null; // reserve slot while loading
+
+  p.load("#ff6666", true).then(() => {
+    remotePlayers[id] = p;
+    p.updateRemote(playerData);
+  }).catch((err) => {
+    console.error("Failed to load remote player:", id, err);
+    delete remotePlayers[id];
   });
 }
 
 function destroyRemote(id) {
   if (remotePlayers[id]) {
     remotePlayers[id].destroy();
+  }
+  if (remotePlayers[id] !== undefined) {
     delete remotePlayers[id];
     console.log("Removed remote player:", id);
   }

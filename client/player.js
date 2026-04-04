@@ -67,7 +67,7 @@ function resolveWalls(pos) {
 }
 
 /* ─── LOAD FRAMES HELPER ─── */
-async function loadFrames(color) {
+async function loadFrames(color, transparent = false) {
   const loader = new GLTFLoader();
   const scenes = await Promise.all(
     FRAME_FILES.map(f => new Promise((res, rej) =>
@@ -84,6 +84,10 @@ async function loadFrames(color) {
         child.receiveShadow = true;
         child.material = child.material.clone(); // avoid shared material mutation
         child.material.color.set(color);
+        if (transparent) {
+          child.material.transparent = true;
+          child.material.opacity = 0.5;
+        }
       }
     });
   });
@@ -130,8 +134,8 @@ export default class Player {
   }
 
   /* ─── ASYNC INIT: load GLB frames ─── */
-  async load(color = "#ffffff") {
-    this.frames = await loadFrames(color);
+  async load(color = "#ffffff", transparent = false) {
+    this.frames = await loadFrames(color, transparent);
     this.frames.forEach((f, i) => {
       f.visible = i === 0;
       this.modelGroup.add(f);
@@ -248,8 +252,11 @@ export default class Player {
 
       const ceilY = getCeilingY(this.body.position);
       if (ceilY !== null) {
-        this.body.position.y = ceilY - HALF_HEIGHT - RADIUS;
-        if (this.velocityY > 0) this.velocityY = 0;
+        const ceilingLimit = ceilY - HALF_HEIGHT - RADIUS;
+        if (this.body.position.y > ceilingLimit) {
+          this.body.position.y = ceilingLimit;
+          if (this.velocityY > 0) this.velocityY = GRAVITY;
+        }
       }
     } else {
       if (this.body.position.y <= HALF_HEIGHT) {
